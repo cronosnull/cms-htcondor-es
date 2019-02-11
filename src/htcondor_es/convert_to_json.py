@@ -745,23 +745,18 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         result['CPUModel'] = str(ad['MachineAttrCPUModel0'])
         result['CPUModelName'] = str(ad['MachineAttrCPUModel0'])
         result['Processor'] = str(ad['MachineAttrCPUModel0'])
+        _values = {
+        'sched': result.get('ScheddName','UNKNOWN'),
+        'cmsUserId': result['User'],
+        'task': result.get('CRAB_Workflow', result['Workflow']),
+        'job': result.get('CRAB_Id','0'),
+        'retry': result.get('CRAB_Retry','0')
+        }
     # Create URL's
     result['jobLogURL'] = 'https://cmsweb.cern.ch/scheddmon/{sched}/{cmsUserId}/{task}/job_out.{job}.{retry}.txt'\
-    .format({
-        'sched': result.get('ScheddName','UNKNOWN'),
-        'cmsUserId': result['User'],
-        'task': result.get('CRAB_Workflow', result['Workflow']),
-        'job': result.get('CRAB_Id','0'),
-        'retry': result.get('CRAB_Retry','0')
-        })
+    .format(**_values)
     result['postJobLogURL'] = 'https://cmsweb.cern.ch/scheddmon/{sched}/{cmsUserId}/{task}/postjob.{job}.{retry}.txt'\
-    .format({
-        'sched': result.get('ScheddName','UNKNOWN'),
-        'cmsUserId': result['User'],
-        'task': result.get('CRAB_Workflow', result['Workflow']),
-        'job': result.get('CRAB_Id','0'),
-        'retry': result.get('CRAB_Retry','0')
-        })
+    .format(**_values)
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
 
