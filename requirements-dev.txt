@@ -1,0 +1,6 @@
+htcondor==8.7.9
+# stomp.py==4.1.21 <-should be a dependency of CMSMonitoring
+elasticsearch>=6.3.1, <7.0.0
+CMSMonitoring>=0.1.9
+requests>=2.22.0
+influxdb

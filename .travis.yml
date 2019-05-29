@@ -1,0 +1,13 @@
+language: python
+python:
+  - "3.6"
+# command to install dependencies
+install:
+  - pip install -r requirements.txt
+  - pip install --upgrade pylint bandit
+  - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then pip  install --upgrade black;fi
+# command to run tests
+script:
+  - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then 2to3 -n -w -p .; black .; fi
+  - pylint --disable=R,C,W --extension-pkg-whitelist=htcondor,classad  *.py src/htcondor_es
+  - bandit -r . -n 3 -ll || true #do not mark the build as failed 

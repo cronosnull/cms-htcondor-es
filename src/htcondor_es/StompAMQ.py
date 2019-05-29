@@ -2,15 +2,16 @@
 """
 Basic interface to CERN ActiveMQ via stomp
 """
-from __future__ import print_function
-from __future__ import division
+
 
 import json
 import logging
 import time
 import stomp
+
 # from WMCore.Services.UUIDLib import makeUUID
 import uuid
+
 
 def makeUUID():
     """
@@ -20,41 +21,45 @@ def makeUUID():
     return str(uuid.uuid4())
 
 
-
 class StompyListener(object):
     """
     Auxiliar listener class to fetch all possible states in the Stomp
     connection.
     """
+
     def __init__(self, logger=None):
         self.logger = logger if logger else logging.getLogger()
 
     def on_connecting(self, host_and_port):
-        self.logger.debug('on_connecting %s', str(host_and_port))
+        self.logger.debug("on_connecting %s", str(host_and_port))
 
     def on_error(self, headers, message):
-        self.logger.debug('received an error %s %s', str(headers), str(message))
+        self.logger.debug("received an error %s %s", str(headers), str(message))
 
     def on_message(self, headers, body):
-        self.logger.debug('on_message %s %s', str(headers), str(body))
+        self.logger.debug("on_message %s %s", str(headers), str(body))
 
     def on_heartbeat(self):
-        self.logger.debug('on_heartbeat')
+        self.logger.debug("on_heartbeat")
 
     def on_send(self, frame):
-        self.logger.debug('on_send HEADERS: %s, BODY: %s ...', str(frame.headers), str(frame.body)[:160])
+        self.logger.debug(
+            "on_send HEADERS: %s, BODY: %s ...",
+            str(frame.headers),
+            str(frame.body)[:160],
+        )
 
     def on_connected(self, headers, body):
-        self.logger.debug('on_connected %s %s', str(headers), str(body))
+        self.logger.debug("on_connected %s %s", str(headers), str(body))
 
     def on_disconnected(self):
-        self.logger.debug('on_disconnected')
+        self.logger.debug("on_disconnected")
 
     def on_heartbeat_timeout(self):
-        self.logger.debug('on_heartbeat_timeout')
+        self.logger.debug("on_heartbeat_timeout")
 
     def on_before_message(self, headers, body):
-        self.logger.debug('on_before_message %s %s', str(headers), str(body))
+        self.logger.debug("on_before_message %s %s", str(headers), str(body))
 
         return (headers, body)
 
@@ -75,15 +80,24 @@ class StompAMQ(object):
     """
 
     # Version number to be added in header
-    _version = '0.3'
+    _version = "0.3"
 
-    def __init__(self, username, password, producer, topic,
-                 host_and_ports=None, logger=None, cert=None, key=None):
+    def __init__(
+        self,
+        username,
+        password,
+        producer,
+        topic,
+        host_and_ports=None,
+        logger=None,
+        cert=None,
+        key=None,
+    ):
         self._username = username
         self._password = password
         self._producer = producer
         self._topic = topic
-        self._host_and_ports = host_and_ports or [('agileinf-mb.cern.ch', 61213)]
+        self._host_and_ports = host_and_ports or [("agileinf-mb.cern.ch", 61213)]
         self.logger = logger if logger else logging.getLogger()
         self._cert = cert
         self._key = key
@@ -103,26 +117,32 @@ class StompAMQ(object):
         :return: a list of notification bodies that failed to send
         """
         # If only a single notification, put it in a list
-        if isinstance(data, dict) and 'body' in data:
+        if isinstance(data, dict) and "body" in data:
             data = [data]
 
         conn = stomp.Connection(host_and_ports=self._host_and_ports)
 
         if self._use_ssl:
             # This requires stomp >= 4.1.15
-            conn.set_ssl(for_hosts=self._host_and_ports, key_file=self._key, cert_file=self._cert)
+            conn.set_ssl(
+                for_hosts=self._host_and_ports, key_file=self._key, cert_file=self._cert
+            )
 
-        conn.set_listener('StompyListener', StompyListener(self.logger))
+        conn.set_listener("StompyListener", StompyListener(self.logger))
         try:
             conn.start()
             # If cert/key are used, ignore username and password
             if self._use_ssl:
                 conn.connect(wait=True)
             else:
-                conn.connect(username=self._username, passcode=self._password, wait=True)
+                conn.connect(
+                    username=self._username, passcode=self._password, wait=True
+                )
 
         except stomp.exception.ConnectFailedException as exc:
-            self.logger.error("Connection to %s failed %s", repr(self._host_and_ports), str(exc))
+            self.logger.error(
+                "Connection to %s failed %s", repr(self._host_and_ports), str(exc)
+            )
             return []
 
         failedNotifications = []
@@ -135,8 +155,12 @@ class StompAMQ(object):
             conn.disconnect()
 
         if failedNotifications:
-            self.logger.warning('Failed to send to %s %i docs out of %i', repr(self._host_and_ports),
-                                len(failedNotifications), len(data))
+            self.logger.warning(
+                "Failed to send to %s %i docs out of %i",
+                repr(self._host_and_ports),
+                len(failedNotifications),
+                len(data),
+            )
 
         return failedNotifications
 
@@ -150,19 +174,31 @@ class StompAMQ(object):
         :return: The notification body in case of failure, or else None
         """
         try:
-            body = notification.pop('body')
-            conn.send(destination=self._topic,
-                      headers=notification,
-                      body=json.dumps(body),
-                      ack='auto')
-            self.logger.debug('Notification %s sent', str(notification))
+            body = notification.pop("body")
+            conn.send(
+                destination=self._topic,
+                headers=notification,
+                body=json.dumps(body),
+                ack="auto",
+            )
+            self.logger.debug("Notification %s sent", str(notification))
         except Exception as exc:
-            self.logger.error('Notification: %s not send, error: %s', str(notification), str(exc))
+            self.logger.error(
+                "Notification: %s not send, error: %s", str(notification), str(exc)
+            )
             return body
         return
 
-    def make_notification(self, payload, docType, docId=None, producer=None, ts=None, metadata=None,
-                          dataSubfield="data"):
+    def make_notification(
+        self,
+        payload,
+        docType,
+        docId=None,
+        producer=None,
+        ts=None,
+        metadata=None,
+        dataSubfield="data",
+    ):
         """
         Produce a notification from a single payload, adding the necessary
         headers and metadata. Generic metadata is generated to include a
@@ -191,14 +227,9 @@ class StompAMQ(object):
         uuid = makeUUID()
         docId = docId or uuid
 
-        headers = {'type': docType,
-                   'version': self._version,
-                   'producer': producer}
+        headers = {"type": docType, "version": self._version, "producer": producer}
 
-        metadata = {'timestamp': ts,
-                    'producer': producer,
-                    '_id': docId,
-                    'uuid': uuid}
+        metadata = {"timestamp": ts, "producer": producer, "_id": docId, "uuid": uuid}
         metadata.update(umetadata)
 
         body = {}
@@ -206,10 +237,10 @@ class StompAMQ(object):
             body[dataSubfield] = payload
         else:
             body.update(payload)
-        body['metadata'] = metadata
+        body["metadata"] = metadata
 
         notification = {}
         notification.update(headers)
-        notification['body'] = body
+        notification["body"] = body
 
         return notification
